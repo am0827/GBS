@@ -8,9 +8,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 # ---- 구글 시트 연동 ---- #
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("ap-jeongbo-00cfcfa3b3ce.json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
 client = gspread.authorize(creds)
 sheet = client.open("ap jeongbo alzar takarrsen").sheet1  # 시트 이름에 맞게 수정
+
 
 # ---- Streamlit 웹앱 UI ---- #
 st.set_page_config(page_title="문학 작품 추천 입력", page_icon="📚", layout="wide")
