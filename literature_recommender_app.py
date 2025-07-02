@@ -12,7 +12,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
     st.secrets["gcp_service_account"], scope
 )
 client = gspread.authorize(creds)
-sheet = client.open("ap jeongbo alzar takarrsen").sheet1  # 시트 이름에 맞게 수정
+sheet = client.open("ap jeongbo alzar takarsenn").sheet1  # 시트 이름에 맞게 수정
 
 
 # ---- Streamlit 웹앱 UI ---- #
@@ -38,7 +38,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📚 사용자 참여형 문학 작품 추천 써-비쓰 : 알자르 타카르센(alzar takarrsen)")
+st.title("📚 사용자 참여형 문학 작품 추천 써-비쓰 : 알자르 타카르센(alzar takarsenn)")
 st.markdown("""
 이 플랫폼은 다양한 사용자가 직접 문학 작품을 추천하고, 그 추천 이유와 감정을 함께 기록함으로써 집단 지성 기반의 문학 데이터베이스를 구축한 뒤, AI를 통해 문학 작품을 추천받을 수 있도록 하는 플랫폼입니다.
 """)
@@ -120,7 +120,7 @@ if query:
     top_n = 5
     results = df.sort_values(by="유사도", ascending=False).head(top_n)
 
-    st.write(f"🔍 '{query}'와 가장 관련성 높은 추천 작품 {top_n}건:")
+    st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
     for _, row in results.iterrows():
         st.markdown(f"### {row['작품명']} - {row['저자']}")
         st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
