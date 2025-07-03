@@ -3,7 +3,7 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 from sentence_transformers import SentenceTransformer, util
-import torch
+import numpy as np
 
 # ---- 구글 시트 연동 ---- #
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -92,12 +92,12 @@ def load_data():
     df.columns = [str(c).strip() for c in df.columns]
     df.fillna("", inplace=True)
     df["감정"] = df["감정"].astype(str).str.replace(",", " ")
-    df["combined_text"] = ("장르: " + df["장르"] + " 감정: " + df["감정"] + " 평가: " + df["평가"])
+    df["평가"] = df["평가"].astype(str)
     return df
 
 @st.cache_resource
 def load_model():
-    return SentenceTransformer("jhgan/ko-sroberta-multitask")
+    return SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 df = load_data()
 model = load_model()
@@ -107,24 +107,35 @@ query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세�
 if query:
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         query_list = [q.strip() for q in query.split(",")]
+        # 감정 임베딩 & 유사도
+        emotion_embeddings = model.encode(df["감정"].tolist(), convert_to_tensor=True)
+        opinion_embeddings = model.encode(df["평가"].tolist(), convert_to_tensor=True)
 
-        query_embs = model.encode(query_list, convert_to_tensor=True)
-        avg_query_emb = torch.mean(query_embs, dim=0, keepdim=True)
-        doc_embs = model.encode(df["combined_text"].tolist(), convert_to_tensor=True)
-        cos_scores = util.pytorch_cos_sim(avg_query_emb, doc_embs)[0]
-        sims = cos_scores.cpu().numpy()
+        # 쿼리를 감정과 평가에 각각 넣기 (문장 단위로)
+        # query 문자열들을 공백으로 합쳐서 단일 텍스트로 만들어 임베딩할 수도 있지만
+        # 여기선 쿼리를 그대로 활용합니다.
+        query_text = " ".join(query_list)
+        query_emotion_emb = model.encode(query_text, convert_to_tensor=True)
+        query_opinion_emb = query_emotion_emb  # 같은 쿼리 사용 (필요시 분리 가능)
 
-        df["유사도"] = sims
-        df_sorted = df.sort_values(by="유사도", ascending=False)
+        # 감정 유사도 (코사인)
+        emotion_sims = util.cos_sim(query_emotion_emb, emotion_embeddings)[0].cpu().numpy()
+        # 평가 유사도 (코사인)
+        opinion_sims = util.cos_sim(query_opinion_emb, opinion_embeddings)[0].cpu().numpy()
 
-        top_n = min(5, len(df_sorted))
-        st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
+        # 가중치 조합 (감정 0.3, 평가 0.7)
+        final_scores = 0.3 * emotion_sims + 0.7 * opinion_sims
 
-        for _, row in df_sorted.head(top_n).iterrows():
+        df["최종점수"] = final_scores
+
+        df_sorted = df.sort_values(by="최종점수", ascending=False)
+
+        st.write(f"🔍 알자르 타카르센의 추천 작품 {min(5, len(df_sorted))}건:")
+        for _, row in df_sorted.head(5).iterrows():
             st.markdown(f"### {row['작품명']} - {row['저자']}")
             st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
             st.write(f"- **평가**: {row['평가']}")
-            st.write(f"- **유사도**: {row['유사도']:.3f}")
+            st.write(f"- **최종점수**: {row['최종점수']:.3f}")
             st.markdown("---")
     else:
         st.warning("⚠️ 데이터가 비어있어 추천을 실행할 수 없습니다. 작품을 한 개 이상 먼저 입력해주세요.")
