@@ -3,7 +3,7 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import euclidean_distances
 
 # ---- 구글 시트 연동 ---- #
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -108,12 +108,19 @@ if query:
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         query_list = [q.strip() for q in query.split(",")]
 
-        # 벡터 기반 유사도 계산
+        # 벡터 임베딩 생성
         query_emb = model.encode(query_list)
         avg_query_emb = query_emb.mean(axis=0).reshape(1, -1)
         doc_embs = model.encode(df["combined_text"].tolist())
-        sims = cosine_similarity(avg_query_emb, doc_embs)[0]
-        df["유사도"] = sims
+
+        # 유클리디언 거리 계산
+        from sklearn.metrics.pairwise import euclidean_distances
+        distances = euclidean_distances(avg_query_emb, doc_embs)[0]
+
+        # 거리 → 유사도로 변환 (거리 작을수록 유사도가 크도록)
+        similarities = 1 / (1 + distances)
+
+        df["유사도"] = similarities
 
         # 키워드 일치 여부 가중치 (감정, 장르, 평가 모두 포함)
         df["키워드점수"] = 0
@@ -122,10 +129,10 @@ if query:
             df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 1.0
             df["키워드점수"] += df["평가"].str.contains(kw, case=False, na=False) * 1.0
 
-        # 최종 점수 계산
-        df["최종점수"] = (df["키워드점수"] * 0.5) + (df["유사도"] * 0.5)
+        # 최종 점수 계산 (유사도 가중치 조금 더 높임)
+        df["최종점수"] = (df["키워드점수"] * 0.4) + (df["유사도"] * 0.6)
 
-        # 전체를 최종점수 기준으로 정렬
+        # 최종점수 기준 정렬
         df_sorted = df.sort_values(by="최종점수", ascending=False)
 
         st.write(f"🔍 알자르 타카르센의 추천 작품 {min(5, len(df_sorted))}건:")
