@@ -20,7 +20,7 @@ st.markdown("""
     .stButton>button { background-color: #6c63ff; color: white; }
     .stTextInput>div>input, .stTextArea>div>textarea { background-color: #fff; }
 </style>""", unsafe_allow_html=True)
-st.title("📚 AI 기반 문학 작품 추천 시스템")
+st.title("📚 사용자 참여형 문학 작품 추천 써-비쓰 : 알자르 탁카르센(alzar takkarsenn)")
 
 # 데이터 입력 폼
 with st.form("book_form"):
@@ -54,7 +54,7 @@ except:
     st.error("시트 데이터 불러오기 실패!")
 
 # AI 추천
-st.header("🔎 도서 추천 받기")
+st.header("🔎 알잘딱깔센 도서 추천 받기")
 @st.cache_data(ttl=600)
 def load_data():
     df = pd.DataFrame(sheet.get_all_records())
@@ -76,7 +76,7 @@ def load_model():
 df = load_data()
 model = load_model()
 
-query = st.text_input("추천 키워드나 감정을 입력하세요 (쉼표로 분리 가능)")
+query = st.text_input("원하는 키워드나 감정을 입력하세요 (쉼표로 분리 가능)")
 
 if query:
     if df.empty:
@@ -92,7 +92,7 @@ if query:
 
         df["유사도"] = sims
         df_sorted = df.sort_values(by="유사도", ascending=False)
-        st.write(f"🔍 추천 결과 상위 {min(5, len(df_sorted))}건")
+        st.write(f"🔍 알자르 타카르센의 추천 결과 상위 {min(5, len(df_sorted))}건")
         for _, row in df_sorted.head(5).iterrows():
             st.markdown(f"### {row['작품명']} — {row['저자']}")
             st.write(f"- 장르: {row['장르']} | 감정: {row['감정']}")
