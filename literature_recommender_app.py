@@ -115,13 +115,14 @@ if query:
         sims = cosine_similarity(avg_query_emb, doc_embs)[0]
         df["유사도"] = sims
 
-        # 키워드 일치 여부 가중치 (보정된 가중치)
+        # 키워드 일치 여부 가중치 (감정, 장르, 평가 모두 포함)
         df["키워드점수"] = 0
         for kw in query_list:
             df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 1.0
             df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 1.0
+            df["키워드점수"] += df["평가"].str.contains(kw, case=False, na=False) * 1.0
 
-        # 최종 점수 계산 (키워드 가중치 적당히, 유사도도 반영)
+        # 최종 점수 계산
         df["최종점수"] = (df["키워드점수"] * 0.5) + (df["유사도"] * 0.5)
 
         # 전체를 최종점수 기준으로 정렬
