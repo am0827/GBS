@@ -2,7 +2,6 @@ import streamlit as st
 import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
-from transformers import pipeline
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -98,7 +97,7 @@ def load_data():
 
 @st.cache_resource
 def load_model():
-    return SentenceTransformer('all-MiniLM-L6-v2')
+    return SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 df = load_data()
 model = load_model()
