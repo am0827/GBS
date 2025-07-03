@@ -92,8 +92,7 @@ def load_data():
     df.columns = [str(c).strip() for c in df.columns]
     df.fillna("", inplace=True)
     df["감정"] = df["감정"].astype(str).str.replace(",", " ")
-    df["combined_text"] = df["평가"] + " " + df["감정"] + " " + df["장르"]
-    return df
+    df["combined_text"] = ("장르: " + df["장르"] + " 감정: " + df["감정"] + " 평가: " + df["평가"])
 
 @st.cache_resource
 def load_model():
