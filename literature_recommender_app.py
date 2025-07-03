@@ -103,22 +103,26 @@ model = load_model()
 
 query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세요 (쉼표로 여러 개 입력 가능)")
 
-if query and not df.empty:
-    query_list = [q.strip() for q in query.split(",")]
-    query_emb = model.encode(query_list)
-    avg_query_emb = query_emb.mean(axis=0).reshape(1, -1)
-    doc_embs = model.encode(df["combined_text"].tolist())
-    sims = cosine_similarity(avg_query_emb, doc_embs)[0]
-    df["유사도"] = sims
-    top_n = 5
-    results = df.sort_values(by="유사도", ascending=False).head(top_n)
+query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세요 (쉼표로 여러 개 입력 가능)")
 
-    st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:") 
-    for _, row in results.iterrows():
-        st.markdown(f"### {row['작품명']} - {row['저자']}")
-        st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
-        st.write(f"- **평가**: {row['평가']}")
-        st.write(f"- **유사도 점수**: {row['유사도']:.3f}")
-        st.markdown("---")
-elif query:
-    st.warning("⚠️ 데이터가 비어있어 추천을 실행할 수 없습니다. 작품을 한 개 이상 먼저 입력해주세요.")
+if query:
+    if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
+        query_list = [q.strip() for q in query.split(",")]
+        query_emb = model.encode(query_list)
+        avg_query_emb = query_emb.mean(axis=0).reshape(1, -1)
+        doc_embs = model.encode(df["combined_text"].tolist())
+        sims = cosine_similarity(avg_query_emb, doc_embs)[0]
+        df["유사도"] = sims
+        top_n = 5
+        results = df.sort_values(by="유사도", ascending=False).head(top_n)
+
+        st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
+        for _, row in results.iterrows():
+            st.markdown(f"### {row['작품명']} - {row['저자']}")
+            st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
+            st.write(f"- **평가**: {row['평가']}")
+            st.write(f"- **유사도 점수**: {row['유사도']:.3f}")
+            st.markdown("---")
+    else:
+        st.warning("⚠️ 데이터가 비어있어 추천을 실행할 수 없습니다. 작품을 한 개 이상 먼저 입력해주세요.")
+
