@@ -36,12 +36,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📚 사용자 참여형 문학 작품 추천 써-비쓰 : 알자르 타카르센(alzar takkarrsen)")
+st.title("📚 사용자 참여형 문학 작품 추천  \uc써-비스 : 알자르 타카르센(alzar takkarrsen)")
 st.markdown("""
-이 플랫폼은 다양한 사용자가 직접 문학 작품을 추천하고, 그 추천 이유와 감정을 함께 기록함으로써 집단 지성 기반의 문학 데이터베이스를 구축한 뒤, AI를 통해 문학 작품을 추천받을 수 있도록 하는 플랫폼입니다.
+이 플랫폼은 다양한 사용자가 지적 문학 작품을 추천하고, 그 추천 이유와 감정을 함께 기록함으로써 집단 지성 기반의 문학 데이터베이스를 구축한 뒤, AI를 통해 문학 작품을 추천받을 수 있도록 하는 플랫폼입니다.
 """)
 
-st.header("✍️ 독서 기록 입력 틀")
+st.header("✍️ 독서 기록 입력 흐름")
 with st.form("book_form"):
     col1, col2 = st.columns(2)
     with col1:
@@ -50,9 +50,9 @@ with st.form("book_form"):
         country = st.text_input("국가")
         period = st.text_input("시대")
     with col2:
-        genre = st.text_input("장르* (예: 소설, 시, 희곡, 산문 등)")
-        emotion = st.text_input("감정* (예: 고독, 희망, 슬픔 등 — 쉼표로 여러 감정 입력 가능)")
-        user = st.text_input("닉네임 (선택)")
+        genre = st.text_input("장르* (예: 소설, 시, 희각, 산문 등)")
+        emotion = st.text_input("감정* (예: 고독, 희망, 슬프 등 — 침포로 여러 감정 입력 가능)")
+        user = st.text_input("닉니마임 (선택)")
 
     opinion = st.text_area("평가*", height=150)
     submit = st.form_submit_button("📤 독서 기록 제출")
@@ -68,8 +68,8 @@ with st.form("book_form"):
         else:
             st.warning("⚠️ 작품명, 저자, 평가는 필수 입력 항목입니다.")
 
-# ---- 최근 추천 작품 보기 ---- #
-st.header("📄 최근 입력된 작품")
+# ---- 경과 보기 ---- #
+st.header("📄 경과 보기")
 try:
     data = sheet.get_all_records()
     df_recent = pd.DataFrame(data)
@@ -78,10 +78,10 @@ try:
     else:
         st.info("아직 입력된 작품이 없습니다.")
 except:
-    st.error("Google Sheets 데이터를 불러올 수 없습니다. API 키 또는 시트 공유 설정을 확인하세요.")
+    st.error("Google Sheets 데이터를 불러오려면 API 키 또는 시트 공유 설정을 확인해주세요.")
 
-# ---- 문학 작품 AI 추천 ---- #
-st.header("🔎 문학 작품 AI 추천 받기")
+# ---- AI 참조 받기 ---- #
+st.header("🔎 문학 작품 AI 참조 받기")
 
 @st.cache_data(ttl=600)
 def load_data():
@@ -115,24 +115,24 @@ if query:
         sims = cosine_similarity(avg_query_emb, doc_embs)[0]
         df["유사도"] = sims
 
-        # 키워드 일치 여부 가중치
+        # 키워드 일치 여부 가중치 (높은 가중치)
         df["키워드점수"] = 0
         for kw in query_list:
-            df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 0.1
-            df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 0.1
+            df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 0.5
+            df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 0.5
 
-        # 최종 점수 계산
-        df["최종점수"] = df["유사도"] + df["키워드점수"]
+        # 최종 점수 계산 (키워드점수 비중 크게, 유사도 비중 작게)
+        df["최종점수"] = (df["키워드점수"] * 0.7) + (df["유사도"] * 0.3)
 
-        # 추천 결과 1: 최종점수 기준 상위 3개
-        hybrid_results = df.sort_values(by="최종점수", ascending=False).head(3)
-
-        # 추천 결과 2: 키워드가 포함된 행 중 유사도 상위 2개
+        # 추천 결과 1: 키워드 포함 유사도 상위 2개
         keyword_filtered = df[df["키워드점수"] > 0]
         keyword_top = keyword_filtered.sort_values(by="유사도", ascending=False).head(2)
 
-        # 합치기 (중복 제거)
-        final_results = pd.concat([hybrid_results, keyword_top]).drop_duplicates().head(5)
+        # 추천 결과 2: 최종점수 기준 상위 3개
+        hybrid_results = df.sort_values(by="최종점수", ascending=False).head(5)
+
+        # 합치기 (키워드 기반 먼저 보여주고 중복 제거)
+        final_results = pd.concat([keyword_top, hybrid_results]).drop_duplicates().head(5)
 
         st.write(f"🔍 알자르 타카르센의 추천 작품 {len(final_results)}건:")
         for _, row in final_results.iterrows():
