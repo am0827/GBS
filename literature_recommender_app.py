@@ -51,32 +51,31 @@ st.markdown("""
 
 st.header("✍️ 독서 기록 입력 틀")
 with st.form("book_form"):
-   col1, col2 = st.columns(2)
-   with col1:
-       title = st.text_input("작품명*")
-       author = st.text_input("저자*")
-       country = st.text_input("국가")
-       period = st.text_input("시대")
-   with col2:
-       genre = st.text_input("장르* (예: 소설, 시, 희곡, 산문 등)")
-       emotion = st.text_input("감정* (예: 고독, 희망, 슬픔 등)")
-       user = st.text_input("닉네임 (선택)")
+    col1, col2 = st.columns(2)
+    with col1:
+        title = st.text_input("작품명*")
+        author = st.text_input("저자*")
+        country = st.text_input("국가")
+        period = st.text_input("시대")
+    with col2:
+        genre = st.text_input("장르* (예: 소설, 시, 희곡, 산문 등)")
+        emotion = st.text_input("감정* (예: 고독, 희망, 슬픔 등 — 쉼표로 여러 감정 입력 가능)")
+        user = st.text_input("닉네임 (선택)")
 
+    reason = st.text_area("추천 이유*", height=150)
+    submit = st.form_submit_button("📤 독서 기록 제출")
 
-   reason = st.text_area("추천 이유*", height=150)
-   submit = st.form_submit_button("📤 독서 기록 제출")
+    if submit:
+        if title and author and reason:
+            row = [title, author, country, period, genre, emotion, reason, user]
+            try:
+                sheet.append_row(row)
+                st.success("✅ 독서 기록이 저장되었습니다.")
+            except Exception as e:
+                st.error(f"❌ 저장 중 오류 발생: {e}")
+        else:
+            st.warning("⚠️ 작품명, 저자, 추천 이유는 필수 입력 항목입니다.")
 
-
-   if submit:
-       if title and author and reason:
-           row = [title, author, country, period, genre, emotion, reason, user]
-           try:
-               sheet.append_row(row)
-               st.success("✅ 독서 기록이 저장되었습니다.")
-           except Exception as e:
-               st.error(f"❌ 저장 중 오류 발생: {e}")
-       else:
-           st.warning("⚠️ 작품명, 저자, 추천 이유는 필수 입력 항목입니다.")
 
 
 # 최근 입력 작품 보기
@@ -101,47 +100,45 @@ st.header("🔎알자르 탁카르센에게 도서 추천받기")
 
 @st.cache_data(ttl=600)
 def load_data():
-   try:
-       data = sheet.get_all_records()
-       if not data:
-           st.warning("📭 아직 데이터가 입력되지 않았습니다.")
-           st.stop()
-       df = pd.DataFrame(data)
-       df.columns = [str(col).strip() for col in df.columns]
-       df.fillna("", inplace=True)
-       st.write("📌 현재 DataFrame 컬럼명 목록:", df.columns.tolist())
-       df["combined_text"] = df["추천 이유"] + " " + df["감정"] + " " + df["장르"]
-       return df
-   except Exception as e:
-       st.error(f"❌ 데이터를 불러오는 중 오류 발생: {e}")
-       return pd.DataFrame()  # 빈 데이터프레임 반환
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    if df.empty:
+        return pd.DataFrame()
+    df.columns = [str(c).strip() for c in df.columns]
+    df.fillna("", inplace=True)
+    df["감정"] = df["감정"].astype(str).str.replace(",", " ")
+    df["combined_text"] = df["추천 이유"] + " " + df["감정"] + " " + df["장르"]
+    return df
 
 
 @st.cache_resource
 def load_model():
-   return SentenceTransformer('all-MiniLM-L6-v2')
-
+    return SentenceTransformer('all-MiniLM-L6-v2')
 
 df = load_data()
 model = load_model()
 
 
-query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세요")
+query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세요 (쉼표로 여러 개 입력 가능)")
 
-
-if query:
-   query_emb = model.encode([query])
-   doc_embs = model.encode(df["combined_text"].tolist())
-   sims = cosine_similarity(query_emb, doc_embs)[0]
-   df["유사도"] = sims
-   top_n = 5
-   results = df.sort_values(by="유사도", ascending=False).head(top_n)
+if query and not df.empty:
+    query_list = [q.strip() for q in query.split(",")]
+    query_emb = model.encode(query_list)
+    avg_query_emb = query_emb.mean(axis=0).reshape(1, -1)
+    doc_embs = model.encode(df["combined_text"].tolist())
+    sims = cosine_similarity(avg_query_emb, doc_embs)[0]
+    df["유사도"] = sims
+    top_n = 5
+    results = df.sort_values(by="유사도", ascending=False).head(top_n)
 
 
    st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
-   for _, row in results.iterrows():
-       st.markdown(f"### {row['작품명']} - {row['저자']}")
-       st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
-       st.write(f"- **추천 이유**: {row['추천 이유']}")
-       st.write(f"- **유사도 점수**: {row['유사도']:.3f}")
-       st.markdown("---")
+    for _, row in results.iterrows():
+        st.markdown(f"### {row['작품명']} - {row['저자']}")
+        st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
+        st.write(f"- **추천 이유**: {row['추천 이유']}")
+        st.write(f"- **유사도 점수**: {row['유사도']:.3f}")
+        st.markdown("---")
+
+elif query:
+    st.warning("⚠️ 데이터가 비어있어 추천을 실행할 수 없습니다. 작품을 한 개 이상 먼저 입력해주세요.")
