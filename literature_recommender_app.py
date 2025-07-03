@@ -91,7 +91,6 @@ def load_data():
         return pd.DataFrame()
     df.columns = [str(c).strip() for c in df.columns]
     df.fillna("", inplace=True)
-    # 쉼표는 공백으로 변경 (키워드 매칭 용이)
     df["감정"] = df["감정"].astype(str).str.replace(",", " ")
     df["combined_text"] = ("장르: " + df["장르"] + " 감정: " + df["감정"] + " 평가: " + df["평가"])
     return df
@@ -109,33 +108,14 @@ if query:
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         query_list = [q.strip() for q in query.split(",")]
 
-        # query 문장 임베딩 (tensor)
         query_embs = model.encode(query_list, convert_to_tensor=True)
-        # 평균 벡터 (tensor)
         avg_query_emb = torch.mean(query_embs, dim=0, keepdim=True)
-
-        # 문서 임베딩 (tensor)
         doc_embs = model.encode(df["combined_text"].tolist(), convert_to_tensor=True)
-
-        # 코사인 유사도 (tensor)
         cos_scores = util.pytorch_cos_sim(avg_query_emb, doc_embs)[0]
-
-        # numpy 배열로 변환
         sims = cos_scores.cpu().numpy()
 
         df["유사도"] = sims
-
-        # 키워드 점수 계산 (감정, 장르, 평가 모두 문자열 포함 여부 확인)
-        df["키워드점수"] = 0
-        for kw in query_list:
-            df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 1.0
-            df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 1.0
-            df["키워드점수"] += df["평가"].str.contains(kw, case=False, na=False) * 1.0
-
-        # 최종 점수 계산: 유사도 반영 비율 0.7, 키워드 반영 비율 0.3
-        df["최종점수"] = df["유사도"] * 0.7 + df["키워드점수"] * 0.3
-
-        df_sorted = df.sort_values(by="최종점수", ascending=False)
+        df_sorted = df.sort_values(by="유사도", ascending=False)
 
         top_n = min(5, len(df_sorted))
         st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
@@ -144,7 +124,7 @@ if query:
             st.markdown(f"### {row['작품명']} - {row['저자']}")
             st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
             st.write(f"- **평가**: {row['평가']}")
-            st.write(f"- **유사도**: {row['유사도']:.3f} | **키워드점수**: {row['키워드점수']:.2f} | **최종점수**: {row['최종점수']:.3f}")
+            st.write(f"- **유사도**: {row['유사도']:.3f}")
             st.markdown("---")
     else:
         st.warning("⚠️ 데이터가 비어있어 추천을 실행할 수 없습니다. 작품을 한 개 이상 먼저 입력해주세요.")
