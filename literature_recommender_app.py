@@ -79,7 +79,7 @@ with st.form("book_form"):
 
 
 # 최근 입력 작품 보기
-st.header("📄 최근 입력력된 작품")
+st.header("📄 최근 입력된 작품")
 try:
    data = sheet.get_all_records()
    if data:
@@ -132,7 +132,7 @@ if query and not df.empty:
     results = df.sort_values(by="유사도", ascending=False).head(top_n)
 
 
-   st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
+st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
     for _, row in results.iterrows():
         st.markdown(f"### {row['작품명']} - {row['저자']}")
         st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
