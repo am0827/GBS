@@ -107,21 +107,39 @@ query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세�
 if query:
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         query_list = [q.strip() for q in query.split(",")]
+
+        # 벡터 기반 유사도 계산
         query_emb = model.encode(query_list)
         avg_query_emb = query_emb.mean(axis=0).reshape(1, -1)
         doc_embs = model.encode(df["combined_text"].tolist())
         sims = cosine_similarity(avg_query_emb, doc_embs)[0]
         df["유사도"] = sims
-        top_n = 5
-        results = df.sort_values(by="유사도", ascending=False).head(top_n)
 
-        st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
-        for _, row in results.iterrows():
+        # 키워드 일치 여부 가중치
+        df["키워드점수"] = 0
+        for kw in query_list:
+            df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 0.1
+            df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 0.1
+
+        # 최종 점수 계산
+        df["최종점수"] = df["유사도"] + df["키워드점수"]
+
+        # 추천 결과 1: 최종점수 기준 상위 3개
+        hybrid_results = df.sort_values(by="최종점수", ascending=False).head(3)
+
+        # 추천 결과 2: 키워드가 포함된 행 중 유사도 상위 2개
+        keyword_filtered = df[df["키워드점수"] > 0]
+        keyword_top = keyword_filtered.sort_values(by="유사도", ascending=False).head(2)
+
+        # 합치기 (중복 제거)
+        final_results = pd.concat([hybrid_results, keyword_top]).drop_duplicates().head(5)
+
+        st.write(f"🔍 알자르 타카르센의 추천 작품 {len(final_results)}건:")
+        for _, row in final_results.iterrows():
             st.markdown(f"### {row['작품명']} - {row['저자']}")
             st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
             st.write(f"- **평가**: {row['평가']}")
-            st.write(f"- **유사도 점수**: {row['유사도']:.3f}")
+            st.write(f"- **유사도**: {row['유사도']:.3f} | **키워드점수**: {row['키워드점수']:.2f} | **최종점수**: {row['최종점수']:.3f}")
             st.markdown("---")
     else:
         st.warning("⚠️ 데이터가 비어있어 추천을 실행할 수 없습니다. 작품을 한 개 이상 먼저 입력해주세요.")
-
