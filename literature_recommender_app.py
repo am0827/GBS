@@ -36,7 +36,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📚 사용자 참여형 문학 작품 추천  써-비스 : 알자르 타카르센(alzar takkarrsen)")
+st.title("📚 사용자 참여형 문학 작품 추천 써-비스 : 알자르 타카르센(alzar takkarrsen)")
 st.markdown("""
 이 플랫폼은 다양한 사용자가 지적 문학 작품을 추천하고, 그 추천 이유와 감정을 함께 기록함으로써 집단 지성 기반의 문학 데이터베이스를 구축한 뒤, AI를 통해 문학 작품을 추천받을 수 있도록 하는 플랫폼입니다.
 """)
@@ -50,9 +50,9 @@ with st.form("book_form"):
         country = st.text_input("국가")
         period = st.text_input("시대")
     with col2:
-        genre = st.text_input("장르* (예: 소설, 시, 희각, 산문 등)")
-        emotion = st.text_input("감정* (예: 고독, 희망, 슬프 등 — 침포로 여러 감정 입력 가능)")
-        user = st.text_input("닉니마임 (선택)")
+        genre = st.text_input("장르* (예: 소설, 시, 희곡, 산문 등)")
+        emotion = st.text_input("감정* (예: 고독, 희망, 슬픔 등 — 쉼표로 여러 감정 입력 가능)")
+        user = st.text_input("닉네임 (선택)")
 
     opinion = st.text_area("평가*", height=150)
     submit = st.form_submit_button("📤 독서 기록 제출")
@@ -115,27 +115,20 @@ if query:
         sims = cosine_similarity(avg_query_emb, doc_embs)[0]
         df["유사도"] = sims
 
-        # 키워드 일치 여부 가중치 (높은 가중치)
+        # 키워드 일치 여부 가중치 (보정된 가중치)
         df["키워드점수"] = 0
         for kw in query_list:
-            df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 0.5
-            df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 0.5
+            df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 1.0
+            df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 1.0
 
-        # 최종 점수 계산 (키워드점수 비중 크게, 유사도 비중 작게)
-        df["최종점수"] = (df["키워드점수"] * 0.7) + (df["유사도"] * 0.3)
+        # 최종 점수 계산 (키워드 가중치 적당히, 유사도도 반영)
+        df["최종점수"] = (df["키워드점수"] * 0.5) + (df["유사도"] * 0.5)
 
-        # 추천 결과 1: 키워드 포함 유사도 상위 2개
-        keyword_filtered = df[df["키워드점수"] > 0]
-        keyword_top = keyword_filtered.sort_values(by="유사도", ascending=False).head(2)
+        # 전체를 최종점수 기준으로 정렬
+        df_sorted = df.sort_values(by="최종점수", ascending=False)
 
-        # 추천 결과 2: 최종점수 기준 상위 3개
-        hybrid_results = df.sort_values(by="최종점수", ascending=False).head(5)
-
-        # 합치기 (키워드 기반 먼저 보여주고 중복 제거)
-        final_results = pd.concat([keyword_top, hybrid_results]).drop_duplicates().head(5)
-
-        st.write(f"🔍 알자르 타카르센의 추천 작품 {len(final_results)}건:")
-        for _, row in final_results.iterrows():
+        st.write(f"🔍 알자르 타카르센의 추천 작품 {min(5, len(df_sorted))}건:")
+        for _, row in df_sorted.head(5).iterrows():
             st.markdown(f"### {row['작품명']} - {row['저자']}")
             st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
             st.write(f"- **평가**: {row['평가']}")
