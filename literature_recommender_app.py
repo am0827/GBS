@@ -103,8 +103,6 @@ model = load_model()
 
 query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세요 (쉼표로 여러 개 입력 가능)")
 
-query = st.text_input("추천받고 싶은 키워드나 감정을 입력하세요 (쉼표로 여러 개 입력 가능)")
-
 if query:
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         query_list = [q.strip() for q in query.split(",")]
