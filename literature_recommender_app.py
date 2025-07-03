@@ -2,8 +2,8 @@ import streamlit as st
 import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import euclidean_distances
+from sentence_transformers import SentenceTransformer, util
+import torch
 
 # ---- 구글 시트 연동 ---- #
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -91,13 +91,14 @@ def load_data():
         return pd.DataFrame()
     df.columns = [str(c).strip() for c in df.columns]
     df.fillna("", inplace=True)
+    # 쉼표는 공백으로 변경 (키워드 매칭 용이)
     df["감정"] = df["감정"].astype(str).str.replace(",", " ")
     df["combined_text"] = ("장르: " + df["장르"] + " 감정: " + df["감정"] + " 평가: " + df["평가"])
     return df
 
 @st.cache_resource
 def load_model():
-    return SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    return SentenceTransformer("jhgan/ko-sroberta-multitask")
 
 df = load_data()
 model = load_model()
@@ -108,35 +109,38 @@ if query:
     if df is not None and isinstance(df, pd.DataFrame) and not df.empty:
         query_list = [q.strip() for q in query.split(",")]
 
-        # 벡터 임베딩 생성
-        query_emb = model.encode(query_list)
-        avg_query_emb = query_emb.mean(axis=0).reshape(1, -1)
-        doc_embs = model.encode(df["combined_text"].tolist())
+        # query 문장 임베딩 (tensor)
+        query_embs = model.encode(query_list, convert_to_tensor=True)
+        # 평균 벡터 (tensor)
+        avg_query_emb = torch.mean(query_embs, dim=0, keepdim=True)
 
-        # 유클리디언 거리 계산
-        from sklearn.metrics.pairwise import euclidean_distances
-        distances = euclidean_distances(avg_query_emb, doc_embs)[0]
+        # 문서 임베딩 (tensor)
+        doc_embs = model.encode(df["combined_text"].tolist(), convert_to_tensor=True)
 
-        # 거리 → 유사도로 변환 (거리 작을수록 유사도가 크도록)
-        similarities = 1 / (1 + distances)
+        # 코사인 유사도 (tensor)
+        cos_scores = util.pytorch_cos_sim(avg_query_emb, doc_embs)[0]
 
-        df["유사도"] = similarities
+        # numpy 배열로 변환
+        sims = cos_scores.cpu().numpy()
 
-        # 키워드 일치 여부 가중치 (감정, 장르, 평가 모두 포함)
+        df["유사도"] = sims
+
+        # 키워드 점수 계산 (감정, 장르, 평가 모두 문자열 포함 여부 확인)
         df["키워드점수"] = 0
         for kw in query_list:
             df["키워드점수"] += df["감정"].str.contains(kw, case=False, na=False) * 1.0
             df["키워드점수"] += df["장르"].str.contains(kw, case=False, na=False) * 1.0
             df["키워드점수"] += df["평가"].str.contains(kw, case=False, na=False) * 1.0
 
-        # 최종 점수 계산 (유사도 가중치 조금 더 높임)
-        df["최종점수"] = (df["키워드점수"] * 0.4) + (df["유사도"] * 0.6)
+        # 최종 점수 계산: 유사도 반영 비율 0.7, 키워드 반영 비율 0.3
+        df["최종점수"] = df["유사도"] * 0.7 + df["키워드점수"] * 0.3
 
-        # 최종점수 기준 정렬
         df_sorted = df.sort_values(by="최종점수", ascending=False)
 
-        st.write(f"🔍 알자르 타카르센의 추천 작품 {min(5, len(df_sorted))}건:")
-        for _, row in df_sorted.head(5).iterrows():
+        top_n = min(5, len(df_sorted))
+        st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
+
+        for _, row in df_sorted.head(top_n).iterrows():
             st.markdown(f"### {row['작품명']} - {row['저자']}")
             st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
             st.write(f"- **평가**: {row['평가']}")
