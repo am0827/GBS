@@ -62,19 +62,19 @@ with st.form("book_form"):
         emotion = st.text_input("감정* (예: 고독, 희망, 슬픔 등 — 쉼표로 여러 감정 입력 가능)")
         user = st.text_input("닉네임 (선택)")
 
-    reason = st.text_area("추천 이유*", height=150)
+    opinion = st.text_area("평가*", height=150)
     submit = st.form_submit_button("📤 독서 기록 제출")
 
     if submit:
-        if title and author and reason:
-            row = [title, author, country, period, genre, emotion, reason, user]
+        if title and author and opinion:
+            row = [title, author, country, period, genre, emotion, opinion, user]
             try:
                 sheet.append_row(row)
                 st.success("✅ 독서 기록이 저장되었습니다.")
             except Exception as e:
                 st.error(f"❌ 저장 중 오류 발생: {e}")
         else:
-            st.warning("⚠️ 작품명, 저자, 추천 이유는 필수 입력 항목입니다.")
+            st.warning("⚠️ 작품명, 저자, 평가는 필수 입력 항목입니다.")
 
 
 
@@ -107,7 +107,7 @@ def load_data():
     df.columns = [str(c).strip() for c in df.columns]
     df.fillna("", inplace=True)
     df["감정"] = df["감정"].astype(str).str.replace(",", " ")
-    df["combined_text"] = df["추천 이유"] + " " + df["감정"] + " " + df["장르"]
+    df["combined_text"] = df["평가"] + " " + df["감정"] + " " + df["장르"]
     return df
 
 
@@ -132,11 +132,11 @@ if query and not df.empty:
     results = df.sort_values(by="유사도", ascending=False).head(top_n)
 
 
-st.write(f"🔍 알자르 타카르센의 추천 작품 {top_n}건:")
-    for _, row in results.iterrows():
+st.write(f"🔍 알자르 탁카르센의 추천 작품 {top_n}건:") 
+for _, row in results.iterrows():
         st.markdown(f"### {row['작품명']} - {row['저자']}")
         st.write(f"- **장르**: {row['장르']}  |  **감정**: {row['감정']}")
-        st.write(f"- **추천 이유**: {row['추천 이유']}")
+        st.write(f"- **평가**: {row['평가']}")
         st.write(f"- **유사도 점수**: {row['유사도']:.3f}")
         st.markdown("---")
 
