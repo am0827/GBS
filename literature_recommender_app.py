@@ -43,8 +43,13 @@ with st.form("book_form"):
 # 최근 기록 보기
 st.header("📄 최근 입력된 작품")
 try:
-    df_recent = pd.DataFrame(sheet.get_all_records())
-    st.dataframe(df_recent[::-1], use_container_width=True) if not df_recent.empty else st.info("아직 기록이 없습니다.")
+    data = sheet.get_all_records()
+    df_recent = pd.DataFrame(data)
+    
+    if not df_recent.empty:
+        st.dataframe(df_recent[::-1], use_container_width=True)
+    else:
+        st.info("아직 입력된 작품이 없습니다.")
 except:
     st.error("시트 데이터 불러오기 실패!")
 
