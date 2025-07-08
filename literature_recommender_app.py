@@ -20,7 +20,7 @@ st.markdown("""
     .stButton>button { background-color: #6c63ff; color: white; }
     .stTextInput>div>input, .stTextArea>div>textarea { background-color: #fff; }
 </style>""", unsafe_allow_html=True)
-st.title("📚 사용자 참여형 문학 작품 추천 써-비쓰 : 알자르 탁카르센(alzar takkarsenn)")
+st.title("📚 사용자 참여형 문학 작품 추천 써-비쓰 : 알자르 탁카르센(Alzar Tahkkarsen)")
 
 # 데이터 입력 폼
 with st.form("book_form"):
