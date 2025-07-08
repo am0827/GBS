@@ -11,7 +11,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
     st.secrets["gcp_service_account"], scope
 )
 client = gspread.authorize(creds)
-sheet = client.open("ap jeongbo alzar takkarsenn").sheet1
+sheet = client.open("ap jeongbo alzar tahkarsen").sheet1
 
 # ---- Streamlit 웹 UI ---- #
 st.set_page_config(page_title="📚 문학 작품 추천", page_icon="📚", layout="wide")
