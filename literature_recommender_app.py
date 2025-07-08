@@ -92,6 +92,16 @@ if query:
 
         df["유사도"] = sims
         df_sorted = df.sort_values(by="유사도", ascending=False)
+
+        # ✅ 알자르 타카르센 이미지 삽입
+        st.image(
+            "https://github.com/am0827/GBS/raw/d3b2b8f4beb4a2d3083e47bbb23afe971a1796fb/%EC%95%8C%EC%9E%90%EB%A5%B4_%ED%83%81%EC%B9%B4%EB%A5%B4%EC%84%BC.png",
+            caption="이야기꾼 알자르 타카르센",
+            use_column_width=False,
+            width=200
+        )
+        st.markdown("🧙 이야기꾼 **알자르 타카르센**이 추천한 도서입니다.")
+
         st.write(f"🔍 알자르 타카르센의 추천 결과 상위 {min(5, len(df_sorted))}건")
         for _, row in df_sorted.head(5).iterrows():
             st.markdown(f"### {row['작품명']} — {row['저자']}")
