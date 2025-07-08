@@ -96,7 +96,6 @@ if query:
         # ✅ 알자르 타카르센 이미지 삽입
         st.image(
             "https://github.com/am0827/GBS/raw/d3b2b8f4beb4a2d3083e47bbb23afe971a1796fb/%EC%95%8C%EC%9E%90%EB%A5%B4_%ED%83%81%EC%B9%B4%EB%A5%B4%EC%84%BC.png",
-            caption="이야기꾼 알자르 타카르센",
             width=200
         )
         st.markdown("🧙 이야기꾼 **알자르 타카르센**이 추천한 도서입니다.")
