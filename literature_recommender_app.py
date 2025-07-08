@@ -63,7 +63,8 @@ def load_data():
     df.fillna("", inplace=True)
     df["감정"] = df["감정"].astype(str).str.replace(",", " ")
     df["combined_text"] = (
-        "장르: " + df["장르"] +
+        "국가: " + df["국가"] +
+        " 장르: " + df["장르"] +
         " 감정: " + df["감정"] +
         " 평가: " + df["평가"]
     )
